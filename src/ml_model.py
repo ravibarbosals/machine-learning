@@ -2,16 +2,20 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, classification_report
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
 from sklearn.tree import DecisionTreeClassifier, export_text
-
 
 class Classificador:
     """Prevê qual vacina a pessoa recebeu a partir do perfil (dados da SILVER)."""
 
     ALVO = "vacina"
-    NUMERICAS = ["idade", "dose", "ano", "mes"]
+    NUMERICAS = ["idade", "dose", "dia_ano"]
     CATEGORICAS = ["sexo", "raca_cor", "distrito_sanitario"]
+    GRADE = {
+        "max_depth": [4, 6, 8, 10, 12, 15, None],
+        "min_samples_leaf": [1, 3, 5, 10, 20],
+        "criterion": ["gini", "entropy"],
+    }
 
     def __init__(self, profundidade=4, min_registros=50):
         self.min_registros = min_registros
@@ -20,8 +24,7 @@ class Classificador:
     def preparar(self, df):
         df = df.copy()
         data = pd.to_datetime(df["data_vacinacao"])
-        df["ano"] = data.dt.year
-        df["mes"] = data.dt.month
+        df["dia_ano"] = data.dt.dayofyear
         df = df.dropna(subset=self.NUMERICAS + [self.ALVO])
 
         # remove vacinas raras (poucos exemplos para aprender)
@@ -42,6 +45,25 @@ class Classificador:
         chute = DummyClassifier(strategy="most_frequent").fit(X_treino, y_treino)
         acuracia = accuracy_score(y_teste, chute.predict(X_teste))
         print(f"[model] linha de base: {acuracia:.1%}")
+
+    def validar(self, X_treino, y_treino, folds=5):
+        # mede modelo treino, o teste fica guardado pro final
+        notas = cross_val_score(self.modelo, X_treino, y_treino, cv=folds, scoring="accuracy")
+        print(f"[model] acuracia na validação: {notas.mean():.1%} (+- {notas.std():.1%})")
+        return notas.mean()
+
+    def buscar_parametros(self, X_treino, y_treino, folds=5):
+            # testa todas as combinações da GRADE com validação cruzada, só no treino
+            busca = GridSearchCV(self.modelo, self.GRADE, cv=folds, scoring="accuracy",
+                                return_train_score=True)
+            busca.fit(X_treino, y_treino)
+            self.modelo = busca.best_estimator_
+
+            melhor = busca.best_index_
+            treino = busca.cv_results_["mean_train_score"][melhor]
+            print(f"[model] melhores parâmetros: {busca.best_params_}")
+            print(f"[model] acurácia no treino: {treino:.1%} | na validação: {busca.best_score_:.1%}")
+            return busca.best_params_
 
     def treinar(self, X_treino, y_treino):
         self.modelo.fit(X_treino, y_treino)
