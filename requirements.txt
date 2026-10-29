@@ -1,0 +1,8 @@
+requests
+pandas
+pymongo
+sqlalchemy
+psycopg[binary]
+python-dotenv
+scikit-learn
+matplotlib
