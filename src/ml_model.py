@@ -82,7 +82,11 @@ class Classificador:
         print(export_text(self.modelo, feature_names=self.colunas, max_depth=3))
 
     def matriz_confusao(self, X_teste, y_teste, arquivo="matriz_confusao.png"):
-        ConfusionMatrixDisplay.from_estimator(self.modelo, X_teste, y_teste, xticks_rotation=45, cmap="Oranges")
-        plt.tight_layout()
-        plt.savefig(arquivo, dpi=150)
+        fig, ax = plt.subplots(figsize=(11, 9))
+        ConfusionMatrixDisplay.from_estimator(self.modelo, X_teste, y_teste, ax=ax,
+                                              xticks_rotation=45, cmap="Oranges")
+        plt.setp(ax.get_xticklabels(), ha="right")  # alinha o nome ao fim do tick
+        fig.tight_layout()
+        fig.savefig(arquivo, dpi=150)
+        plt.close(fig)
         print(f"[model] matriz de confusão salva em {arquivo}")
