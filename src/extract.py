@@ -44,3 +44,8 @@ class Extract:
 
         print(f"[extract] {len(df)} linhas lidas da silver")
         return df
+
+    def ler_perfis(self, arquivo="perfis_novos.csv"):
+        df = pd.read_csv(arquivo)
+        print(f"[extract] {len(df)} perfis novos lidos de {arquivo}")
+        return df

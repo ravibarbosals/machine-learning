@@ -25,3 +25,11 @@ class Load:
         engine = create_engine(config.NEON_URL)
         df.to_sql(config.TABELA_SILVER, engine, if_exists="replace", index=False)
         print(f"[load] {len(df)} linhas gravadas na tabela '{config.TABELA_SILVER}'")
+
+    def salvar_gold(self, df):
+        df = df.copy()
+        df["data_previsao"] = datetime.now()
+        engine = create_engine(config.NEON_URL)
+        df.to_sql(config.TABELA_GOLD, engine, if_exists="append", index=False)
+        engine.dispose()
+        print(f"[load] {len(df)} previsões gravadas na tabela '{config.TABELA_GOLD}'")

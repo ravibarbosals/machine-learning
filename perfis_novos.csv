@@ -1,0 +1,7 @@
+perfil,idade,dose,data_vacinacao,sexo,raca_cor,distrito_sanitario
+crianca,8,1,2022-02-15,FEMININO,PARDA,DS 4
+reforco,45,3,2022-06-20,MASCULINO,BRANCA,DS 2
+adulto_primeira_dose,25,1,2022-01-20,MASCULINO,PARDA,DS 3
+idoso_quarta_dose,80,4,2022-09-05,FEMININO,BRANCA,DS 1
+distrito_inexistente,30,1,2022-02-10,FEMININO,PRETA,DS 99
+fora_do_periodo,60,4,2023-08-15,MASCULINO,PARDA,DS 6

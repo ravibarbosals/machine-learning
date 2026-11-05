@@ -47,6 +47,21 @@ class Classificador:
     def codificar(self, df):
         # texto -> colunas 0/1 (one-hot)
         return pd.get_dummies(df[self.NUMERICAS + self.CATEGORICAS], columns=self.CATEGORICAS, dtype=int)
+    
+    def preparar_entrada(self, df):
+        # mesmo caminho do preparar(), mas sem alvo e sem filtrar vacinas raras
+        df = self.criar_features(df)
+        X = self.codificar(df)
+        # mesmas colunas do treino, na mesma ordem; categoria nunca vista vira tudo 0
+        return X.reindex(columns=self.colunas, fill_value=0)
+
+    def prever(self, perfis):
+        X = self.preparar_entrada(perfis)
+        probabilidades = self.modelo.predict_proba(X)
+        resultado = perfis.copy()
+        resultado["vacina_prevista"] = self.modelo.classes_[probabilidades.argmax(axis=1)]
+        resultado["confianca"] = probabilidades.max(axis=1).round(3)
+        return resultado
 
     def dividir(self, X, y):
         # não alterar: todos os grupos usam a mesma divisão treino/teste
