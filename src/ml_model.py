@@ -1,9 +1,13 @@
+import os
+
+import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, classification_report
 from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
 from sklearn.tree import DecisionTreeClassifier, export_text
+from src import config
 
 class Classificador:
     """Prevê qual vacina a pessoa recebeu a partir do perfil (dados da SILVER)."""
@@ -22,9 +26,7 @@ class Classificador:
         self.modelo = DecisionTreeClassifier(max_depth=profundidade, random_state=42)
 
     def preparar(self, df):
-        df = df.copy()
-        data = pd.to_datetime(df["data_vacinacao"])
-        df["dia_ano"] = data.dt.dayofyear
+        df = self.criar_features(df)
         df = df.dropna(subset=self.NUMERICAS + [self.ALVO])
 
         # remove vacinas raras (poucos exemplos para aprender)
@@ -32,10 +34,19 @@ class Classificador:
         manter = contagem[contagem >= self.min_registros].index
         df = df[df[self.ALVO].isin(manter)]
 
-        colunas = self.NUMERICAS + self.CATEGORICAS
-        X = pd.get_dummies(df[colunas], columns=self.CATEGORICAS, dtype=int)
+        X = self.codificar(df)
         y = df[self.ALVO]
         return X, y
+
+    def criar_features(self, df):
+        # colunas derivadas: usadas no treino (preparar) e na previsão (preparar_entrada)
+        df = df.copy()
+        df["dia_ano"] = pd.to_datetime(df["data_vacinacao"]).dt.dayofyear
+        return df
+
+    def codificar(self, df):
+        # texto -> colunas 0/1 (one-hot)
+        return pd.get_dummies(df[self.NUMERICAS + self.CATEGORICAS], columns=self.CATEGORICAS, dtype=int)
 
     def dividir(self, X, y):
         # não alterar: todos os grupos usam a mesma divisão treino/teste
@@ -90,3 +101,18 @@ class Classificador:
         fig.savefig(arquivo, dpi=150)
         plt.close(fig)
         print(f"[model] matriz de confusão salva em {arquivo}")
+
+    def salvar(self, arquivo=config.CAMINHO_MODELO):
+        os.makedirs(os.path.dirname(arquivo), exist_ok=True)
+        # guarda a árvore E a lista de colunas: sem ela não dá para alinhar os dados novos
+        joblib.dump({"modelo": self.modelo, "colunas": self.colunas}, arquivo)
+        print(f"[model] modelo salvo em {arquivo}")
+
+    @classmethod
+    def carregar(cls, arquivo=config.CAMINHO_MODELO):
+        pacote = joblib.load(arquivo)
+        classificador = cls()
+        classificador.modelo = pacote["modelo"]
+        classificador.colunas = pacote["colunas"]
+        print(f"[model] modelo carregado de {arquivo}")
+        return classificador
